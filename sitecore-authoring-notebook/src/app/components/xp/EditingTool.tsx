@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { FaWrench, FaTimes } from 'react-icons/fa'; // Example icons
+import { FaWrench, FaTimes, FaCaretDown, FaCaretUp } from 'react-icons/fa'; // Example icons
 import GraphQLQueryBuilderForm from './GraphQLQueryBuilderForm'; // Import the form component
 
 interface EditingToolProps {
@@ -11,8 +11,10 @@ interface EditingToolProps {
 const EditingTool: React.FC<EditingToolProps> = ({ onGraphQLResult }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [generatedQuery, setGeneratedQuery] = useState('');
-  const [queryResult, setQueryResult] = useState(null);
+  const [queryResult, setQueryResult] = useState<any | null>(null);
   const [queryError, setQueryError] = useState('');
+  const [isGeneratedQueryCollapsed, setIsGeneratedQueryCollapsed] = useState(true); // Default to collapsed
+  const [isResultCollapsed, setIsResultCollapsed] = useState(true); // Default to collapsed
 
   const handleClick = () => {
     setIsOpen(!isOpen);
@@ -20,9 +22,21 @@ const EditingTool: React.FC<EditingToolProps> = ({ onGraphQLResult }) => {
 
   const handleBuildQuery = (query: string) => {
     setGeneratedQuery(query);
+    setIsGeneratedQueryCollapsed(true); // Keep collapsed on new build if desired, or set to false to expand
+  };
+
+  const toggleGeneratedQueryCollapse = () => {
+    setIsGeneratedQueryCollapsed(!isGeneratedQueryCollapsed);
+  };
+
+  const toggleResultCollapse = () => {
+    setIsResultCollapsed(!isResultCollapsed);
   };
 
   const handleQueryResult = useCallback((result: any) => {
+    setQueryResult(result);
+    setQueryError('');
+    setIsResultCollapsed(true); // Default to collapsed on new result
     if (result?.item) {
       const headerRow = ['Item Path'];
       const dataRow = [result.item.path];
@@ -33,7 +47,6 @@ const EditingTool: React.FC<EditingToolProps> = ({ onGraphQLResult }) => {
         }
       }
       onGraphQLResult([headerRow, dataRow]);
-      setQueryError('');
     } else if (Array.isArray(result?.items)) {
       const headerRow = ['Item Path'];
       const firstItem = result.items[0];
@@ -54,17 +67,16 @@ const EditingTool: React.FC<EditingToolProps> = ({ onGraphQLResult }) => {
         return row;
       });
       onGraphQLResult([headerRow, ...dataRows]);
-      setQueryError('');
     } else {
       onGraphQLResult([['No Data Found']]);
     }
-    setQueryResult(result); // Store the raw result for display
   }, [onGraphQLResult]);
 
   const handleQueryError = useCallback((error: string) => {
     setQueryError(error);
-    onGraphQLResult([['Error Fetching Data']]);
     setQueryResult(null);
+    setIsResultCollapsed(false); // Keep error visible by default
+    onGraphQLResult([['Error Fetching Data']]);
   }, [onGraphQLResult]);
 
   return (
@@ -91,20 +103,29 @@ const EditingTool: React.FC<EditingToolProps> = ({ onGraphQLResult }) => {
           />
           {generatedQuery && (
             <div className="border border-gray-700 rounded-md p-2 bg-gray-800">
-              <label className="block text-sm font-medium text-gray-300">Generated Query:</label>
-              <pre className="text-xs text-gray-400 whitespace-pre-wrap">{generatedQuery}</pre>
+              <div className="flex items-center justify-between cursor-pointer" onClick={toggleGeneratedQueryCollapse}>
+                <label className="block text-sm font-medium text-gray-300">Generated Query:</label>
+                <FaCaretDown size={16} /> {/* Default to down caret for collapsed */}
+              </div>
+              {isGeneratedQueryCollapsed ? null : <pre className="text-xs text-gray-400 whitespace-pre-wrap">{generatedQuery}</pre>}
             </div>
           )}
           {queryError && (
             <div className="border border-red-500 rounded-md p-2 bg-red-800 text-red-300">
-              <label className="block text-sm font-medium text-red-300">Error:</label>
-              <pre className="text-xs whitespace-pre-wrap">{queryError}</pre>
+              <div className="flex items-center justify-between cursor-pointer" onClick={toggleResultCollapse}>
+                <label className="block text-sm font-medium text-red-300">Error:</label>
+                <FaCaretDown size={16} /> {/* Default to down caret for collapsed */}
+              </div>
+              {isResultCollapsed ? null : <pre className="text-xs whitespace-pre-wrap">{queryError}</pre>}
             </div>
           )}
           {queryResult && (
             <div className="border border-green-500 rounded-md p-2 bg-green-800 text-green-300">
-              <label className="block text-sm font-medium text-green-300">Query Result:</label>
-              <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(queryResult, null, 2)}</pre>
+              <div className="flex items-center justify-between cursor-pointer" onClick={toggleResultCollapse}>
+                <label className="block text-sm font-medium text-green-300">Query Result:</label>
+                <FaCaretDown size={16} /> {/* Default to down caret for collapsed */}
+              </div>
+              {isResultCollapsed ? null : <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(queryResult, null, 2)}</pre>}
             </div>
           )}
         </div>
