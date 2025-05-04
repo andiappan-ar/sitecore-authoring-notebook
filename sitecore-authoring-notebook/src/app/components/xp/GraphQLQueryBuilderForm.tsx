@@ -12,7 +12,7 @@ const GraphQLQueryBuilderForm: React.FC<GraphQLQueryBuilderFormProps> = ({ onBui
   const [path, setPath] = useState('/sitecore/content/Home');
   const [language, setLanguage] = useState('en');
   const [version, setVersion] = useState('');
-  const [fieldsInput, setFieldsInput] = useState('text\nTitle'); // Example initial fields
+  const [fieldsInput, setFieldsInput] = useState<string[]>(['text', 'Title']); // Example initial fields as array
   const [loading, setLoading] = useState(false);
 
   const handlePathChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,19 +28,20 @@ const GraphQLQueryBuilderForm: React.FC<GraphQLQueryBuilderFormProps> = ({ onBui
   };
 
   const handleFieldsInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setFieldsInput(event.target.value);
+    setFieldsInput(event.target.value.split('\n').map(field => field.trim()).filter(field => field !== ''));
   };
 
   const buildGraphQLQuery = useCallback(() => {
-    const fieldsArray = fieldsInput.split('\n').map(field => field.trim()).filter(field => field !== '');
-    const fieldsQuery = fieldsArray.map(fieldName => `
-      ${fieldName}: field(name:"${fieldName}"){
-        id
-        name
-        value
-        __typename
-      }
-    `).join('\n');
+    const fieldsQuery = fieldsInput
+      .map(fieldName => `
+        ${fieldName}: field(name:"${fieldName}"){
+          id
+          name
+          value
+          __typename
+        }
+      `)
+      .join('\n');
 
     const query = `
       query {
@@ -142,7 +143,7 @@ const GraphQLQueryBuilderForm: React.FC<GraphQLQueryBuilderFormProps> = ({ onBui
         <textarea
           id="fields"
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          value={fieldsInput}
+          value={fieldsInput.join('\n')} // Display array as multiline text
           onChange={handleFieldsInputChange}
           rows={4}
         />

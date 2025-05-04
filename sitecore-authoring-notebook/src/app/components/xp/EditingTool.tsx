@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { FaWrench, FaTimes } from 'react-icons/fa'; // Example icons
 import GraphQLQueryBuilderForm from './GraphQLQueryBuilderForm'; // Import the form component
 
 interface EditingToolProps {
-  // You can pass props if needed
+  onGraphQLResult: (data: any[]) => void; // New prop to pass data to UniverSheet
 }
 
-const EditingTool: React.FC<EditingToolProps> = ({}) => {
+const EditingTool: React.FC<EditingToolProps> = ({ onGraphQLResult }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [generatedQuery, setGeneratedQuery] = useState('');
   const [queryResult, setQueryResult] = useState(null);
@@ -22,15 +22,50 @@ const EditingTool: React.FC<EditingToolProps> = ({}) => {
     setGeneratedQuery(query);
   };
 
-  const handleQueryResult = (result: any) => {
-    setQueryResult(result);
-    setQueryError('');
-  };
+  const handleQueryResult = useCallback((result: any) => {
+    if (result?.item) {
+      const headerRow = ['Item Path'];
+      const dataRow = [result.item.path];
+      for (const key in result.item) {
+        if (key !== 'path') {
+          headerRow.push(key);
+          dataRow.push(result.item[key]?.value);
+        }
+      }
+      onGraphQLResult([headerRow, dataRow]);
+      setQueryError('');
+    } else if (Array.isArray(result?.items)) {
+      const headerRow = ['Item Path'];
+      const firstItem = result.items[0];
+      if (firstItem) {
+        for (const key in firstItem) {
+          if (key !== 'path') {
+            headerRow.push(key);
+          }
+        }
+      }
+      const dataRows = result.items.map((item: { [x: string]: { value: any; }; path: any; }) => {
+        const row = [item.path];
+        for (const key in item) {
+          if (key !== 'path') {
+            row.push(item[key]?.value);
+          }
+        }
+        return row;
+      });
+      onGraphQLResult([headerRow, ...dataRows]);
+      setQueryError('');
+    } else {
+      onGraphQLResult([['No Data Found']]);
+    }
+    setQueryResult(result); // Store the raw result for display
+  }, [onGraphQLResult]);
 
-  const handleQueryError = (error: string) => {
+  const handleQueryError = useCallback((error: string) => {
     setQueryError(error);
+    onGraphQLResult([['Error Fetching Data']]);
     setQueryResult(null);
-  };
+  }, [onGraphQLResult]);
 
   return (
     <div className="fixed left-0 bottom-0 w-full z-1000">
